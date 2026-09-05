@@ -1,0 +1,222 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Mini Attendance Management System API",
+    "version": "1.0.0",
+    "description": "RESTful API for Mini Attendance Management System built for Twite AI Technologies Technical Assessment."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token obtained from /api/auth/login"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string", "example": "admin" },
+          "password": { "type": "string", "example": "admin123" }
+        }
+      },
+      "Employee": {
+        "type": "object",
+        "required": ["employee_id", "employee_name", "email", "mobile_number", "department", "designation"],
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "employee_id": { "type": "string", "example": "EMP-001" },
+          "employee_name": { "type": "string", "example": "Arun Kumar" },
+          "email": { "type": "string", "format": "email", "example": "arun.kumar@twiteai.com" },
+          "mobile_number": { "type": "string", "example": "+91 98765 43210" },
+          "department": { "type": "string", "example": "Engineering" },
+          "designation": { "type": "string", "example": "Senior AI Engineer" },
+          "status": { "type": "string", "enum": ["Active", "Inactive"], "example": "Active" }
+        }
+      },
+      "Attendance": {
+        "type": "object",
+        "required": ["employee_id", "attendance_date", "attendance_status"],
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "employee_id": { "type": "string", "example": "EMP-001" },
+          "attendance_date": { "type": "string", "format": "date", "example": "2026-09-04" },
+          "check_in_time": { "type": "string", "example": "09:00:00" },
+          "check_out_time": { "type": "string", "example": "18:00:00" },
+          "attendance_status": { "type": "string", "enum": ["Present", "Absent", "Late", "Half-Day"], "example": "Present" },
+          "notes": { "type": "string", "example": "Regular shift" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "Authenticate user & issue JWT",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful, returns JWT token" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get authenticated user profile",
+        "tags": ["Authentication"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Current user details" }
+        }
+      }
+    },
+    "/api/employees": {
+      "get": {
+        "summary": "Get all employees with pagination, search, filter, and sorting",
+        "tags": ["Employees"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Search keyword" },
+          { "name": "department", "in": "query", "schema": { "type": "string" }, "description": "Filter by department" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["Active", "Inactive", "All"] } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "sortBy", "in": "query", "schema": { "type": "string", "default": "created_at" } },
+          { "name": "sortOrder", "in": "query", "schema": { "type": "string", "enum": ["ASC", "DESC"], "default": "DESC" } }
+        ],
+        "responses": {
+          "200": { "description": "List of employees with pagination metadata" }
+        }
+      },
+      "post": {
+        "summary": "Create a new employee",
+        "tags": ["Employees"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Employee" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Employee created successfully" },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Employee ID or Email already exists" }
+        }
+      }
+    },
+    "/api/employees/{id}": {
+      "get": {
+        "summary": "Get employee by ID",
+        "tags": ["Employees"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Employee details with recent attendance history" },
+          "404": { "description": "Employee not found" }
+        }
+      },
+      "put": {
+        "summary": "Update an existing employee",
+        "tags": ["Employees"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Employee" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Employee updated successfully" }
+        }
+      },
+      "delete": {
+        "summary": "Delete employee and associated records",
+        "tags": ["Employees"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Employee deleted successfully" }
+        }
+      }
+    },
+    "/api/attendance": {
+      "get": {
+        "summary": "Get attendance records with date and employee filters",
+        "tags": ["Attendance"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "date", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "employee_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "department", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": { "200": { "description": "List of attendance records" } }
+      },
+      "post": {
+        "summary": "Mark or update attendance for an employee on a specific date",
+        "tags": ["Attendance"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Attendance" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Attendance updated" },
+          "201": { "description": "Attendance marked successfully" }
+        }
+      }
+    },
+    "/api/attendance/summary": {
+      "get": {
+        "summary": "Get attendance counts and percentage for date",
+        "tags": ["Attendance"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "date", "in": "query", "schema": { "type": "string", "format": "date" } }],
+        "responses": { "200": { "description": "Attendance summary metrics" } }
+      }
+    },
+    "/api/attendance/export": {
+      "get": {
+        "summary": "Export attendance records to CSV",
+        "tags": ["Attendance"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "CSV attachment file" }
+        }
+      }
+    },
+    "/api/dashboard/stats": {
+      "get": {
+        "summary": "Get high-level dashboard metrics, today's roll-call, and department breakdown",
+        "tags": ["Dashboard"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Dashboard statistics" } }
+      }
+    }
+  }
+}
